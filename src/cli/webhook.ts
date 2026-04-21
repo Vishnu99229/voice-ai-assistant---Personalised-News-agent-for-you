@@ -6,47 +6,52 @@ import http from "node:http";
 const PORT = Number(process.env.WEBHOOK_PORT) || 3456;
 
 /**
- * Minimal webhook server for Vapi.ai.
- * Listens for incoming POST requests on /webhook and responds with 200.
+ * Vapi.ai webhook server.
+ * - POST /webhook  → parse JSON, log structured event, respond 200 immediately
+ * - GET  /health   → respond 200 "healthy"
+ * - Everything else → 404
  */
 const server = http.createServer((req, res) => {
-  // Health-check / ping
+  // ── Health check ──────────────────────────────────────────────────
   if (req.method === "GET" && req.url === "/health") {
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ status: "ok" }));
+    res.writeHead(200);
+    res.end("healthy");
     return;
   }
 
-  // Vapi webhook endpoint
+  // ── Vapi webhook endpoint ─────────────────────────────────────────
   if (req.method === "POST" && req.url === "/webhook") {
+    // Respond 200 immediately so Vapi never times out
+    res.writeHead(200);
+    res.end("ok");
+
+    // Collect body asynchronously (after response is already sent)
     let body = "";
     req.on("data", (chunk: Buffer) => {
       body += chunk.toString();
     });
     req.on("end", () => {
       try {
-        const payload = JSON.parse(body);
-        console.log(`📩 Webhook received [${new Date().toISOString()}]`);
-        console.log(`   Type: ${payload.message?.type ?? "unknown"}`);
-        console.log(`   Payload keys: ${Object.keys(payload).join(", ")}\n`);
+        const data = JSON.parse(body);
 
-        // TODO: Route specific Vapi event types here
-        // e.g. "end-of-call-report", "function-call", "assistant-request"
+        const eventType = data.type ?? "unknown";
+        const callId = data.call_id ?? "N/A";
 
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ success: true }));
-      } catch (err) {
-        console.error("⚠ Failed to parse webhook body:", err);
-        res.writeHead(400, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "Invalid JSON" }));
+        console.log("\n[WEBHOOK EVENT]");
+        console.log(`type: ${eventType}`);
+        console.log(`callId: ${callId}`);
+        console.log(`Payload: ${JSON.stringify(data)}`);
+      } catch {
+        console.error("\nInvalid JSON received");
+        console.error(`Raw body: ${body}`);
       }
     });
     return;
   }
 
-  // Fallback — 404
-  res.writeHead(404, { "Content-Type": "application/json" });
-  res.end(JSON.stringify({ error: "Not found" }));
+  // ── Fallback — 404 ───────────────────────────────────────────────
+  res.writeHead(404);
+  res.end("Not found");
 });
 
 server.listen(PORT, () => {
