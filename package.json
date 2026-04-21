@@ -10,7 +10,8 @@
     "rank": "tsx src/cli/rank.ts",
     "script": "tsx src/cli/script.ts",
     "daily": "tsx src/cli/run-daily.ts",
-    "webhook": "tsx src/cli/webhook.ts"
+    "webhook": "tsx src/cli/webhook.ts",
+    "call": "tsx src/cli/call.ts"
   },
   "dependencies": {
     "@extractus/article-extractor": "^8.0.14",
