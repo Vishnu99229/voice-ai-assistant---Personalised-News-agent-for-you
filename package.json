@@ -9,7 +9,8 @@
     "ingest": "tsx src/cli/ingest.ts",
     "rank": "tsx src/cli/rank.ts",
     "script": "tsx src/cli/script.ts",
-    "daily": "tsx src/cli/run-daily.ts"
+    "daily": "tsx src/cli/run-daily.ts",
+    "webhook": "tsx src/cli/webhook.ts"
   },
   "dependencies": {
     "@extractus/article-extractor": "^8.0.14",
