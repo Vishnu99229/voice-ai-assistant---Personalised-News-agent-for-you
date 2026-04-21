@@ -3,7 +3,7 @@ delete process.env.OPENAI_API_KEY;
 import "dotenv/config";
 import http from "node:http";
 
-const PORT = Number(process.env.WEBHOOK_PORT) || 3456;
+const PORT = Number(process.env.PORT) || Number(process.env.WEBHOOK_PORT) || 3456;
 
 /**
  * Vapi.ai webhook server.
