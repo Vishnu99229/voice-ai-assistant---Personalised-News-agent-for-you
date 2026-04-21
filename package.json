@@ -1,0 +1,28 @@
+{
+  "name": "morning-brief-agent",
+  "version": "1.0.0",
+  "description": "Hyper-personalized daily news briefing script generator — Day 1: data pipeline + script generation",
+  "type": "module",
+  "scripts": {
+    "db:init": "echo '→ Open your Supabase SQL Editor and paste the contents of src/db/schema.sql, then click Run.'",
+    "seed": "tsx src/db/seed-user.ts",
+    "ingest": "tsx src/cli/ingest.ts",
+    "rank": "tsx src/cli/rank.ts",
+    "script": "tsx src/cli/script.ts",
+    "daily": "tsx src/cli/run-daily.ts"
+  },
+  "dependencies": {
+    "@extractus/article-extractor": "^8.0.14",
+    "@supabase/supabase-js": "^2.49.4",
+    "axios": "^1.7.9",
+    "dotenv": "^16.4.7",
+    "openai": "^4.77.0",
+    "rss-parser": "^3.13.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
