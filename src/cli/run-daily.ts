@@ -1,3 +1,5 @@
+delete process.env.OPENAI_API_KEY;
+
 import { runIngest } from "../ingest/index.js";
 import { rankArticles } from "../rank/rank.js";
 import { generateScript } from "../script/generate.js";
