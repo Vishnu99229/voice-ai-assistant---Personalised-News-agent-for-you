@@ -104,3 +104,21 @@ Top 10 + User Profile ─→ GPT-4o Script Generation ─→ daily_briefing
 
 - **Day 2**: Vapi voice agent that reads `daily_briefing.briefing_script` aloud, with `selected_articles_json` available for follow-up Q&A.
 - **Day 3**: Scheduling (cron), user preferences API, feedback loop.
+
+---
+
+## Landing Page, Admin, and Cron
+
+The webhook server also serves:
+
+- `/` - landing page and waitlist signup form
+- `/admin` - password-protected admin panel
+- `/api/cron/trigger-calls` - scheduled call trigger endpoint
+
+Railway does not natively support cron for hitting an endpoint on your running service. Create a separate Railway Cron Service, or use cron-job.org, to call `https://morning-brief-agent-production.up.railway.app/api/cron/trigger-calls` every 15 minutes with this header:
+
+```text
+Authorization: Bearer <your-CRON_SECRET>
+```
+
+See `SETUP.md` for the migration, deploy, and testing checklist.

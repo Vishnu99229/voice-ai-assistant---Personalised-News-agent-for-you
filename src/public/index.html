@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Morning Brief - Your AI News Call</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0a;
+      color: #e5e5e5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .container { max-width: 640px; width: 100%; padding: 40px 20px; }
+    .badge {
+      display: inline-block;
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 24px;
+      letter-spacing: 0.5px;
+    }
+    h1 {
+      font-size: clamp(28px, 5vw, 42px);
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.2;
+      margin-bottom: 16px;
+    }
+    .subtitle {
+      font-size: 17px;
+      color: #a3a3a3;
+      line-height: 1.6;
+      margin-bottom: 40px;
+    }
+    .features {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      margin-bottom: 48px;
+    }
+    .feature {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 16px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px;
+    }
+    .feature-icon { font-size: 24px; flex-shrink: 0; margin-top: 2px; }
+    .feature h3 { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+    .feature p { font-size: 14px; color: #888; line-height: 1.5; }
+    .form-section {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 32px 24px;
+    }
+    .form-title { font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 6px; }
+    .form-subtitle { font-size: 14px; color: #888; margin-bottom: 28px; }
+    .field { margin-bottom: 20px; }
+    .field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #ccc;
+      margin-bottom: 6px;
+    }
+    .field input, .field textarea, .field select {
+      width: 100%;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 15px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .field input:focus, .field textarea:focus, .field select:focus { border-color: #3b82f6; }
+    .field input::placeholder, .field textarea::placeholder { color: #555; }
+    .field textarea { resize: vertical; min-height: 70px; }
+    .field select option { background: #1a1a1a; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .topics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .topic-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      color: #ccc;
+      transition: all 0.15s;
+    }
+    .topic-chip:has(input:checked) {
+      background: rgba(59, 130, 246, 0.15);
+      border-color: rgba(59, 130, 246, 0.4);
+      color: #60a5fa;
+    }
+    .topic-chip input { display: none; }
+    .consent {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin: 24px 0;
+      font-size: 13px;
+      color: #888;
+      line-height: 1.5;
+    }
+    .consent input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      margin-top: 2px;
+      flex-shrink: 0;
+      accent-color: #3b82f6;
+    }
+    .submit-btn {
+      width: 100%;
+      padding: 14px;
+      background: #3b82f6;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .submit-btn:hover { background: #2563eb; }
+    .submit-btn:disabled { background: #1e3a5f; cursor: not-allowed; }
+    .error-msg { color: #ef4444; font-size: 13px; margin-top: 8px; display: none; }
+    .success-msg { text-align: center; padding: 40px 20px; }
+    .success-msg h2 { font-size: 24px; color: #fff; margin-bottom: 12px; }
+    .success-msg p { color: #888; font-size: 15px; line-height: 1.6; }
+    .footer { text-align: center; padding: 40px 0 24px; font-size: 13px; color: #555; }
+    @media (max-width: 480px) {
+      .field-row { grid-template-columns: 1fr; }
+      .topics-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="badge">INVITE-ONLY BETA</div>
+    <h1>Your news. Delivered by voice. Every morning.</h1>
+    <p class="subtitle">An AI that calls you with a 3-minute briefing tailored to what actually matters to you. Not headlines - your news, framed for your goals.</p>
+
+    <div class="features">
+      <div class="feature">
+        <span class="feature-icon">📞</span>
+        <div>
+          <h3>A real phone call</h3>
+          <p>Not an app to open. Not a newsletter to read. A voice that calls you at your chosen time.</p>
+        </div>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">🎯</span>
+        <div>
+          <h3>Hyper-personalized</h3>
+          <p>Knows your work, your interests, your city. Tells you why each story matters to you specifically.</p>
+        </div>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">🗣️</span>
+        <div>
+          <h3>Interactive</h3>
+          <p>Interrupt anytime. Ask follow-ups. "Tell me more about that funding round." It knows.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section" id="formSection">
+      <h2 class="form-title">Join the waitlist</h2>
+      <p class="form-subtitle">We're onboarding 10 people at a time. Tell us about yourself.</p>
+
+      <form id="signupForm">
+        <div class="field-row">
+          <div class="field">
+            <label>Full name *</label>
+            <input type="text" name="name" required placeholder="Vishnu Priya">
+          </div>
+          <div class="field">
+            <label>Email *</label>
+            <input type="email" name="email" required placeholder="you@example.com">
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label>Phone number *</label>
+            <input type="tel" name="phone" required placeholder="+919880622570">
+          </div>
+          <div class="field">
+            <label>City</label>
+            <input type="text" name="city" placeholder="Bangalore">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>What do you do? *</label>
+          <textarea name="role" required placeholder="e.g. GTM consultant for voice AI and logistics startups"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Topics you want covered</label>
+          <div class="topics-grid">
+            <label class="topic-chip"><input type="checkbox" name="topics" value="Tech & AI"> Tech & AI</label>
+            <label class="topic-chip"><input type="checkbox" name="topics" value="Startup funding"> Startup funding</label>
+            <label class="topic-chip"><input type="checkbox" name="topics" value="Business news"> Business news</label>
+            <label class="topic-chip"><input type="checkbox" name="topics" value="Finance & markets"> Finance & markets</label>
+            <label class="topic-chip"><input type="checkbox" name="topics" value="D2C & e-commerce"> D2C & e-commerce</label>
+            <label class="topic-chip"><input type="checkbox" name="topics" value="Politics"> Politics</label>
+            <label class="topic-chip"><input type="checkbox" name="topics" value="Sports"> Sports</label>
+            <label class="topic-chip"><input type="checkbox" name="topics" value="Local/city news"> Local/city news</label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Anything specific I should track for you?</label>
+          <textarea name="specific_flags" placeholder="e.g. anything about IndiGo, voice AI competitors, or Kerala news"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Preferred call time (IST) *</label>
+          <select name="call_time" required>
+            <option value="">Select a time</option>
+            <option value="06:00">6:00 AM</option>
+            <option value="06:30">6:30 AM</option>
+            <option value="07:00">7:00 AM</option>
+            <option value="07:30">7:30 AM</option>
+            <option value="08:00" selected>8:00 AM</option>
+            <option value="08:30">8:30 AM</option>
+            <option value="09:00">9:00 AM</option>
+            <option value="09:30">9:30 AM</option>
+            <option value="10:00">10:00 AM</option>
+          </select>
+        </div>
+
+        <div class="consent">
+          <input type="checkbox" name="consent" required id="consentCheck">
+          <label for="consentCheck">I agree to receive one daily AI-generated voice call at my chosen time. I can opt out anytime by replying STOP.</label>
+        </div>
+
+        <button type="submit" class="submit-btn" id="submitBtn">Join waitlist</button>
+        <p class="error-msg" id="errorMsg"></p>
+      </form>
+    </div>
+
+    <div class="success-msg" id="successSection" style="display:none;">
+      <h2>You're on the list! 🎉</h2>
+      <p>We're reviewing your submission and will activate your briefing within 48 hours. Your first call will come at your chosen time - keep your phone handy.</p>
+    </div>
+
+    <div class="footer">Built in Bangalore 🇮🇳</div>
+  </div>
+
+  <script>
+    const form = document.getElementById('signupForm');
+    const formSection = document.getElementById('formSection');
+    const successSection = document.getElementById('successSection');
+    const submitBtn = document.getElementById('submitBtn');
+    const errorMsg = document.getElementById('errorMsg');
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting...';
+      errorMsg.style.display = 'none';
+
+      const formData = new FormData(form);
+      const topics = formData.getAll('topics');
+      const phone = formData.get('phone').toString().trim();
+
+      if (!/^\+\d{10,15}$/.test(phone)) {
+        errorMsg.textContent = 'Phone number must be in international format, e.g. +919880622570';
+        errorMsg.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Join waitlist';
+        return;
+      }
+
+      const payload = {
+        name: formData.get('name'),
+        email: formData.get('email'),
+        phone: phone,
+        city: formData.get('city'),
+        role: formData.get('role'),
+        topics: topics,
+        specific_flags: formData.get('specific_flags'),
+        call_time: formData.get('call_time'),
+        consent: formData.get('consent') === 'on'
+      };
+
+      try {
+        const res = await fetch('/api/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          formSection.style.display = 'none';
+          successSection.style.display = 'block';
+        } else {
+          errorMsg.textContent = data.error || 'Something went wrong. Please try again.';
+          errorMsg.style.display = 'block';
+        }
+      } catch {
+        errorMsg.textContent = 'Network error. Please try again.';
+        errorMsg.style.display = 'block';
+      }
+
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Join waitlist';
+    });
+  </script>
+</body>
+</html>

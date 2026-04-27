@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Morning Brief - Admin</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0a0a0a; color: #e5e5e5; padding: 24px; }
+    .login { max-width: 360px; margin: 120px auto; text-align: center; }
+    .login h2 { margin-bottom: 16px; color: #fff; }
+    .login input { width: 100%; padding: 10px 14px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; color: #fff; font-size: 15px; margin-bottom: 12px; }
+    .login button { width: 100%; padding: 12px; background: #3b82f6; color: #fff; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; }
+    .admin-panel { display: none; max-width: 1200px; margin: 0 auto; }
+    .admin-panel h1 { font-size: 24px; color: #fff; margin-bottom: 8px; }
+    .stats { font-size: 14px; color: #888; margin-bottom: 24px; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: #888; }
+    .tab.active { background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.4); color: #60a5fa; }
+    .table-wrap { overflow-x: auto; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 920px; }
+    th { text-align: left; padding: 10px 12px; color: #888; border-bottom: 1px solid rgba(255,255,255,0.08); font-weight: 500; }
+    td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); color: #ccc; vertical-align: top; }
+    .btn-approve { padding: 5px 12px; background: #22c55e; color: #fff; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; }
+    .btn-reject { padding: 5px 12px; background: #ef4444; color: #fff; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; margin-left: 6px; }
+    .btn-call { padding: 5px 12px; background: #3b82f6; color: #fff; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; margin-left: 6px; }
+    .btn-approve:disabled, .btn-reject:disabled, .btn-call:disabled { opacity: 0.5; cursor: not-allowed; }
+    .topics-cell { max-width: 180px; }
+    .role-cell { max-width: 260px; line-height: 1.4; }
+    .topic-tag { display: inline-block; padding: 2px 8px; background: rgba(255,255,255,0.06); border-radius: 4px; font-size: 11px; margin: 2px; }
+    .status-badge { padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+    .status-pending { background: rgba(251,191,36,0.15); color: #fbbf24; }
+    .status-active { background: rgba(34,197,94,0.15); color: #22c55e; }
+    .status-rejected { background: rgba(239,68,68,0.15); color: #ef4444; }
+    .status-paused { background: rgba(156,163,175,0.15); color: #9ca3af; }
+    .empty { text-align: center; padding: 60px 20px; color: #555; }
+  </style>
+</head>
+<body>
+  <div class="login" id="loginSection">
+    <h2>Admin Login</h2>
+    <input type="password" id="pwInput" placeholder="Password">
+    <button onclick="login()">Login</button>
+    <p id="loginError" style="color:#ef4444;font-size:13px;margin-top:8px;display:none;"></p>
+  </div>
+
+  <div class="admin-panel" id="adminPanel">
+    <h1>Morning Brief - Waitlist</h1>
+    <p class="stats" id="statsLine"></p>
+    <div class="tabs">
+      <div class="tab active" data-filter="all" onclick="filterTab(this,'all')">All</div>
+      <div class="tab" data-filter="pending" onclick="filterTab(this,'pending')">Pending</div>
+      <div class="tab" data-filter="active" onclick="filterTab(this,'active')">Active</div>
+      <div class="tab" data-filter="rejected" onclick="filterTab(this,'rejected')">Rejected</div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Name</th><th>Phone</th><th>City</th><th>Role</th><th>Topics</th><th>Call Time</th><th>Status</th><th>Actions</th></tr>
+        </thead>
+        <tbody id="usersBody"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="emptyMsg" style="display:none;">No users found.</div>
+  </div>
+
+  <script>
+    let adminToken = '';
+    let allUsers = [];
+    let currentFilter = 'all';
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      })[char]);
+    }
+
+    async function login() {
+      const pw = document.getElementById('pwInput').value;
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        adminToken = data.token;
+        document.getElementById('loginSection').style.display = 'none';
+        document.getElementById('adminPanel').style.display = 'block';
+        loadUsers();
+      } else {
+        document.getElementById('loginError').textContent = 'Wrong password';
+        document.getElementById('loginError').style.display = 'block';
+      }
+    }
+
+    async function loadUsers() {
+      const res = await fetch('/api/admin/users', {
+        headers: { 'Authorization': 'Bearer ' + adminToken }
+      });
+      if (!res.ok) {
+        document.getElementById('statsLine').textContent = 'Failed to load users. Please log in again.';
+        return;
+      }
+      allUsers = await res.json();
+      const pending = allUsers.filter((u) => u.status === 'pending').length;
+      const active = allUsers.filter((u) => u.status === 'active').length;
+      document.getElementById('statsLine').textContent = allUsers.length + ' total · ' + pending + ' pending · ' + active + ' active';
+      renderTable();
+    }
+
+    function filterTab(el, filter) {
+      document.querySelectorAll('.tab').forEach((tab) => tab.classList.remove('active'));
+      el.classList.add('active');
+      currentFilter = filter;
+      renderTable();
+    }
+
+    function renderTable() {
+      const filtered = currentFilter === 'all' ? allUsers : allUsers.filter((u) => u.status === currentFilter);
+      const body = document.getElementById('usersBody');
+      const empty = document.getElementById('emptyMsg');
+
+      if (filtered.length === 0) {
+        body.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+
+      body.innerHTML = filtered.map((u) => {
+        const form = u.form_data_json || {};
+        const topics = (form.topics || []).map((topic) => '<span class="topic-tag">' + escapeHtml(topic) + '</span>').join('');
+        const status = u.status || 'pending';
+        const statusClass = 'status-' + status;
+        const safeId = escapeHtml(u.id);
+        const actions = status === 'pending'
+          ? '<button class="btn-approve" onclick="approveUser(\'' + safeId + '\', this)">Approve</button><button class="btn-reject" onclick="rejectUser(\'' + safeId + '\', this)">Reject</button>'
+          : status === 'active'
+          ? '<button class="btn-call" onclick="triggerCall(\'' + safeId + '\', this)">Call now</button>'
+          : '';
+        return '<tr>' +
+          '<td>' + escapeHtml(u.name || form.name || '-') + '</td>' +
+          '<td>' + escapeHtml(u.phone || form.phone || '-') + '</td>' +
+          '<td>' + escapeHtml(form.city || '-') + '</td>' +
+          '<td class="role-cell">' + escapeHtml(form.role || '-') + '</td>' +
+          '<td class="topics-cell">' + (topics || '-') + '</td>' +
+          '<td>' + escapeHtml(u.preferred_call_time || form.call_time || '-') + '</td>' +
+          '<td><span class="status-badge ' + statusClass + '">' + escapeHtml(status) + '</span></td>' +
+          '<td>' + actions + '</td>' +
+          '</tr>';
+      }).join('');
+    }
+
+    async function approveUser(id, btn) {
+      btn.disabled = true;
+      btn.textContent = 'Approving...';
+      const res = await fetch('/api/admin/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+        body: JSON.stringify({ userId: id })
+      });
+      if (res.ok) {
+        loadUsers();
+      } else {
+        btn.textContent = 'Failed';
+        setTimeout(() => { btn.disabled = false; btn.textContent = 'Approve'; }, 2000);
+      }
+    }
+
+    async function rejectUser(id, btn) {
+      btn.disabled = true;
+      const res = await fetch('/api/admin/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+        body: JSON.stringify({ userId: id })
+      });
+      if (res.ok) {
+        loadUsers();
+      } else {
+        btn.disabled = false;
+      }
+    }
+
+    async function triggerCall(id, btn) {
+      btn.disabled = true;
+      btn.textContent = 'Calling...';
+      const res = await fetch('/api/admin/trigger-call', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+        body: JSON.stringify({ userId: id })
+      });
+      await res.json().catch(() => ({}));
+      btn.textContent = res.ok ? 'Called!' : 'Failed';
+      setTimeout(() => { btn.disabled = false; btn.textContent = 'Call now'; }, 3000);
+    }
+
+    document.getElementById('pwInput').addEventListener('keypress', (event) => { if (event.key === 'Enter') login(); });
+  </script>
+</body>
+</html>

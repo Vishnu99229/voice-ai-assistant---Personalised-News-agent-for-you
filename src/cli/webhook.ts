@@ -2,6 +2,7 @@ delete process.env.OPENAI_API_KEY;
 
 import "dotenv/config";
 import http from "node:http";
+import { handleRoute } from "../server/routes.js";
 
 const PORT = Number(process.env.PORT) || Number(process.env.WEBHOOK_PORT) || 3456;
 
@@ -11,7 +12,7 @@ const PORT = Number(process.env.PORT) || Number(process.env.WEBHOOK_PORT) || 345
  * - GET  /health   → respond 200 "healthy"
  * - Everything else → 404
  */
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
   // ── Health check ──────────────────────────────────────────────────
   if (req.method === "GET" && req.url === "/health") {
     res.writeHead(200);
@@ -48,6 +49,10 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+
+  // ── App routes: landing page, signup API, admin, cron ─────────────
+  const handled = await handleRoute(req, res);
+  if (handled) return;
 
   // ── Fallback — 404 ───────────────────────────────────────────────
   res.writeHead(404);
