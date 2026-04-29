@@ -403,6 +403,31 @@ export async function handleRoute(req: IncomingMessage, res: ServerResponse): Pr
     return true;
   }
 
+  if (method === "GET" && path === "/api/cron/ingest") {
+    const authHeader = headerValue(req, "authorization");
+    const cronHeader = headerValue(req, "x-cron-secret");
+    if (authHeader !== "Bearer " + CRON_SECRET && cronHeader !== CRON_SECRET && cronHeader !== "Bearer " + CRON_SECRET) {
+      json(res, 401, { error: "Invalid cron secret" });
+      return true;
+    }
+
+    try {
+      console.log("[CRON-INGEST] Starting news ingest...");
+      const { execSync } = await import("node:child_process");
+      const output = execSync("npx tsx src/cli/ingest.ts", {
+        cwd: process.cwd(),
+        timeout: 180000,
+        stdio: "pipe",
+      }).toString();
+      console.log("[CRON-INGEST] Completed:", output.slice(-200));
+      json(res, 200, { success: true, output: output.slice(-500) });
+    } catch (err: any) {
+      console.error("[CRON-INGEST] Failed:", err.message);
+      json(res, 500, { error: err.message });
+    }
+    return true;
+  }
+
   if (method === "GET" && path === "/api/cron/trigger-calls") {
     const authHeader = headerValue(req, "authorization");
     const cronHeader = headerValue(req, "x-cron-secret");
