@@ -24,7 +24,11 @@
     .btn-approve { padding: 5px 12px; background: #22c55e; color: #fff; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; }
     .btn-reject { padding: 5px 12px; background: #ef4444; color: #fff; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; margin-left: 6px; }
     .btn-call { padding: 5px 12px; background: #3b82f6; color: #fff; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; margin-left: 6px; }
-    .btn-approve:disabled, .btn-reject:disabled, .btn-call:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-pause { padding: 5px 12px; background: #ca8a04; color: #fff; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; margin-left: 6px; }
+    .btn-pause:hover { background: #a16207; }
+    .btn-delete { padding: 5px 12px; background: #7f1d1d; color: #fca5a5; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; margin-left: 6px; }
+    .btn-delete:hover { background: #991b1b; }
+    .btn-approve:disabled, .btn-reject:disabled, .btn-call:disabled, .btn-pause:disabled, .btn-delete:disabled { opacity: 0.5; cursor: not-allowed; }
     .topics-cell { max-width: 180px; }
     .role-cell { max-width: 260px; line-height: 1.4; }
     .topic-tag { display: inline-block; padding: 2px 8px; background: rgba(255,255,255,0.06); border-radius: 4px; font-size: 11px; margin: 2px; }
@@ -52,6 +56,7 @@
       <div class="tab" data-filter="pending" onclick="filterTab(this,'pending')">Pending</div>
       <div class="tab" data-filter="active" onclick="filterTab(this,'active')">Active</div>
       <div class="tab" data-filter="rejected" onclick="filterTab(this,'rejected')">Rejected</div>
+      <div class="tab" data-filter="paused" onclick="filterTab(this,'paused')">Paused</div>
     </div>
     <div class="table-wrap">
       <table>
@@ -109,7 +114,8 @@
       allUsers = await res.json();
       const pending = allUsers.filter((u) => u.status === 'pending').length;
       const active = allUsers.filter((u) => u.status === 'active').length;
-      document.getElementById('statsLine').textContent = allUsers.length + ' total · ' + pending + ' pending · ' + active + ' active';
+      const paused = allUsers.filter((u) => u.status === 'paused').length;
+      document.getElementById('statsLine').textContent = allUsers.length + ' total · ' + pending + ' pending · ' + active + ' active · ' + paused + ' paused';
       renderTable();
     }
 
@@ -141,7 +147,12 @@
         const actions = status === 'pending'
           ? '<button class="btn-approve" onclick="approveUser(\'' + safeId + '\', this)">Approve</button><button class="btn-reject" onclick="rejectUser(\'' + safeId + '\', this)">Reject</button>'
           : status === 'active'
-          ? '<button class="btn-call" onclick="triggerCall(\'' + safeId + '\', this)">Call now</button>'
+          ? '<button class="btn-call" onclick="triggerCall(\'' + safeId + '\', this)">Call now</button>' +
+            '<button class="btn-pause" onclick="pauseUser(\'' + safeId + '\', \'' + escapeHtml(u.name || 'user') + '\', this)">Pause</button>' +
+            '<button class="btn-delete" onclick="deleteUser(\'' + safeId + '\', \'' + escapeHtml(u.name || 'user') + '\', this)">Delete</button>'
+          : status === 'paused'
+          ? '<button class="btn-approve" onclick="resumeUser(\'' + safeId + '\', this)">Resume</button>' +
+            '<button class="btn-delete" onclick="deleteUser(\'' + safeId + '\', \'' + escapeHtml(u.name || 'user') + '\', this)">Delete</button>'
           : '';
         return '<tr>' +
           '<td>' + escapeHtml(u.name || form.name || '-') + '</td>' +
@@ -197,6 +208,44 @@
       await res.json().catch(() => ({}));
       btn.textContent = res.ok ? 'Called!' : 'Failed';
       setTimeout(() => { btn.disabled = false; btn.textContent = 'Call now'; }, 3000);
+    }
+
+    async function pauseUser(id, name, btn) {
+      if (!confirm('Pause daily calls for ' + name + '? They will stop receiving calls until resumed.')) return;
+      btn.disabled = true;
+      btn.textContent = 'Pausing...';
+      const res = await fetch('/api/admin/pause', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+        body: JSON.stringify({ userId: id })
+      });
+      if (res.ok) { loadUsers(); }
+      else { btn.textContent = 'Failed'; setTimeout(() => { btn.disabled = false; btn.textContent = 'Pause'; }, 2000); }
+    }
+
+    async function resumeUser(id, btn) {
+      btn.disabled = true;
+      btn.textContent = 'Resuming...';
+      const res = await fetch('/api/admin/resume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+        body: JSON.stringify({ userId: id })
+      });
+      if (res.ok) { loadUsers(); }
+      else { btn.textContent = 'Failed'; setTimeout(() => { btn.disabled = false; btn.textContent = 'Resume'; }, 2000); }
+    }
+
+    async function deleteUser(id, name, btn) {
+      if (!confirm('PERMANENTLY DELETE ' + name + '? This cannot be undone. All their data will be removed.')) return;
+      btn.disabled = true;
+      btn.textContent = 'Deleting...';
+      const res = await fetch('/api/admin/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+        body: JSON.stringify({ userId: id })
+      });
+      if (res.ok) { loadUsers(); }
+      else { btn.textContent = 'Failed'; setTimeout(() => { btn.disabled = false; btn.textContent = 'Delete'; }, 2000); }
     }
 
     document.getElementById('pwInput').addEventListener('keypress', (event) => { if (event.key === 'Enter') login(); });

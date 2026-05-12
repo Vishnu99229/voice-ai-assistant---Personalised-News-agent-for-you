@@ -380,6 +380,65 @@ export async function handleRoute(req: IncomingMessage, res: ServerResponse): Pr
     return true;
   }
 
+  // API: Pause user (stops daily calls but keeps profile)
+  if (method === "POST" && path === "/api/admin/pause") {
+    if (!checkAuth(req)) { json(res, 401, { error: "Unauthorized" }); return true; }
+    const body = await parseBody(req);
+    if (!body.userId) { json(res, 400, { error: "userId required" }); return true; }
+
+    const { error } = await supabase.from("users").update({ status: "paused" }).eq("id", body.userId);
+    if (error) {
+      console.error("[PAUSE] Error:", error);
+      json(res, 500, { error: "Failed to pause user" });
+      return true;
+    }
+
+    console.log(`[PAUSE] User paused: ${body.userId}`);
+    json(res, 200, { success: true });
+    return true;
+  }
+
+  // API: Resume paused user
+  if (method === "POST" && path === "/api/admin/resume") {
+    if (!checkAuth(req)) { json(res, 401, { error: "Unauthorized" }); return true; }
+    const body = await parseBody(req);
+    if (!body.userId) { json(res, 400, { error: "userId required" }); return true; }
+
+    const { error } = await supabase.from("users").update({ status: "active" }).eq("id", body.userId);
+    if (error) {
+      console.error("[RESUME] Error:", error);
+      json(res, 500, { error: "Failed to resume user" });
+      return true;
+    }
+
+    console.log(`[RESUME] User resumed: ${body.userId}`);
+    json(res, 200, { success: true });
+    return true;
+  }
+
+  // API: Delete user permanently (including all briefings)
+  if (method === "POST" && path === "/api/admin/delete") {
+    if (!checkAuth(req)) { json(res, 401, { error: "Unauthorized" }); return true; }
+    const body = await parseBody(req);
+    if (!body.userId) { json(res, 400, { error: "userId required" }); return true; }
+
+    // Delete related briefings first (foreign key constraint)
+    await supabase.from("daily_briefing").delete().eq("user_id", body.userId);
+    
+    // Delete user
+    const { error } = await supabase.from("users").delete().eq("id", body.userId);
+    
+    if (error) {
+      console.error("[DELETE] Error:", error);
+      json(res, 500, { error: "Failed to delete user" });
+      return true;
+    }
+
+    console.log(`[DELETE] User permanently deleted: ${body.userId}`);
+    json(res, 200, { success: true });
+    return true;
+  }
+
   if (method === "POST" && path === "/api/admin/trigger-call") {
     if (!checkAuth(req)) {
       json(res, 401, { error: "Unauthorized" });
